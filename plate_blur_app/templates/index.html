@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Sløring v4.9 Tactical</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body[data-theme="dark"] {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    .img-preview {
+      max-width: 100%;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    #loader {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <h3>🛡️ AI Sløring v4.9.3 – Tactical Edition</h3>
+      <div>
+        <label>🌙 Dark</label>
+        <input type="checkbox" id="darkToggle">
+      </div>
+    </div>
+
+    <form id="uploadForm" enctype="multipart/form-data" class="mt-3">
+      <input type="file" name="image" accept="image/*" required class="form-control mb-3">
+      
+      <label for="method">🔧 Sløringsmetode:</label>
+      <select name="method" id="method" class="form-select mb-2">
+        <option value="pixelate">🟪 Pixelation</option>
+        <option value="blur">💧 Blur</option>
+        <option value="hide">🕳️ Hide</option>
+        <option value="text">✍️ Text erstatning</option>
+        <option value="cleanfill">🧼 Clean fill</option>
+        <option value="letterblur">🔠 Slør kun tegn (fin)</option>
+        <option value="tactical">🔳 TACTICAL PIXELATION (ulæselig)</option>
+      </select>
+
+      <div id="textInput" style="display:none;">
+        <input type="text" name="customText" class="form-control mb-2" placeholder="Skriv tekst her">
+      </div>
+
+      <label>🔍 AI valg:</label>
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" name="detectPlates" checked>
+        <label class="form-check-label">📸 Slør nummerplader</label>
+      </div>
+      <div class="form-check mb-2">
+        <input type="checkbox" class="form-check-input" name="detectFaces" checked>
+        <label class="form-check-label">🙂 Slør ansigter</label>
+      </div>
+
+      <label>💥 Sløringsstyrke:</label>
+      <input type="range" name="strength" class="form-range mb-3" min="5" max="50" value="10">
+
+      <button type="submit" class="btn btn-primary w-100">🚀 Anonymisér billede</button>
+    </form>
+
+    <div id="loader" class="text-center">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Indlæser...</span>
+      </div>
+      <p class="mt-2">AI anonymiserer... Vent lidt 🔐</p>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-6 text-center">
+        <h5>📥 Før</h5>
+        <img id="originalPreview" class="img-preview" />
+      </div>
+      <div class="col-md-6 text-center">
+        <h5>🛡️ Efter</h5>
+        <img id="processedPreview" class="img-preview" style="display:none;" />
+        <a id="downloadBtn" class="btn btn-success mt-3" style="display:none;" download>⬇️ Download billede</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const darkToggle = document.getElementById('darkToggle');
+    darkToggle.onchange = () => {
+      document.documentElement.setAttribute('data-theme', darkToggle.checked ? 'dark' : 'light');
+    };
+
+    const method = document.getElementById('method');
+    const textInput = document.getElementById('textInput');
+    method.onchange = () => {
+      textInput.style.display = method.value === 'text' ? 'block' : 'none';
+    };
+
+    const form = document.getElementById('uploadForm');
+    const originalPreview = document.getElementById('originalPreview');
+    const processedPreview = document.getElementById('processedPreview');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const loader = document.getElementById('loader');
+
+    form.onsubmit = async e => {
+      e.preventDefault();
+      loader.style.display = 'block';
+      processedPreview.style.display = 'none';
+      downloadBtn.style.display = 'none';
+
+      const formData = new FormData(form);
+      const file = form.querySelector('input[type="file"]').files[0];
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        originalPreview.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+
+      try {
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          alert("Fejl:\n" + errorText);
+          loader.style.display = 'none';
+          return;
+        }
+
+        const data = await res.json();
+        const imgUrl = `/processed/${data.filename}?cb=${Date.now()}`;
+
+        loader.style.display = 'none';
+        processedPreview.src = imgUrl;
+        processedPreview.style.display = 'block';
+
+        downloadBtn.href = imgUrl;
+        downloadBtn.download = "anonymiseret_billede.png";
+        downloadBtn.style.display = 'inline-block';
+
+      } catch (err) {
+        loader.style.display = 'none';
+        alert("Noget gik galt: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
